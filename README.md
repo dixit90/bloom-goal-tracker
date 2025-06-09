@@ -1,8 +1,8 @@
-# Welcome to your Lovable project
+# Welcome to your Bloom-goal-tracker
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/85513a7f-7ef6-454b-828f-d1ffc072572f
+**URL**: [https://lovable.dev/projects/85513a7f-7ef6-454b-828f-d1ffc072572f](https://bloom-goal-tracker.vercel.app/)
 
 ## How can I edit this code?
 
