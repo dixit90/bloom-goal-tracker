@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, Calendar, PieChart, Target } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, TrendingUp, Calendar, PieChart, Target, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,42 +10,75 @@ import SavingsGoal from '@/components/SavingsGoal';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import ExpenseCalendar from '@/components/ExpenseCalendar';
 import DarkModeToggle from '@/components/DarkModeToggle';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { Expense, SavingsGoalData } from '@/types/finance';
+import AuthDialog from '@/components/AuthDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { useExpenses } from '@/hooks/useExpenses';
+import { useSavingsGoals } from '@/hooks/useSavingsGoals';
+import { SavingsGoalData } from '@/types/finance';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>('budgetbloom-expenses', []);
-  const [savingsGoal, setSavingsGoal] = useLocalStorage<SavingsGoalData | null>('budgetbloom-savings-goal', null);
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses();
+  const { savingsGoal, updateSavingsGoal } = useSavingsGoals();
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const addExpense = (expense: Omit<Expense, 'id'>) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: Date.now().toString(),
-    };
-    setExpenses(prev => [newExpense, ...prev]);
-    setShowExpenseForm(false);
-    toast({
-      title: "Expense Added",
-      description: `$${expense.amount} spent on ${expense.category}`,
-    });
+  const handleAddExpense = async (expense: Omit<any, 'id'>) => {
+    try {
+      await addExpense(expense);
+      setShowExpenseForm(false);
+      toast({
+        title: "Expense Added",
+        description: `$${expense.amount} spent on ${expense.category}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add expense. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const deleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(expense => expense.id !== id));
-    toast({
-      title: "Expense Deleted",
-      description: "Your expense has been removed",
-    });
+  const handleDeleteExpense = async (id: string) => {
+    try {
+      await deleteExpense(id);
+      toast({
+        title: "Expense Deleted",
+        description: "Your expense has been removed",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete expense. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const updateSavingsGoal = (goal: SavingsGoalData) => {
-    setSavingsGoal(goal);
+  const handleUpdateSavingsGoal = async (goal: SavingsGoalData) => {
+    try {
+      await updateSavingsGoal(goal);
+      toast({
+        title: "Savings Goal Updated",
+        description: `Monthly goal set to $${goal.amount}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update savings goal. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
     toast({
-      title: "Savings Goal Updated",
-      description: `Monthly goal set to $${goal.amount}`,
+      title: "Signed Out",
+      description: "You have been successfully signed out.",
     });
   };
 
@@ -58,6 +91,64 @@ const Index = () => {
 
   const totalSpentThisMonth = currentMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-500 mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background transition-colors duration-300">
+        <div className="container mx-auto px-4 py-6 max-w-6xl">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                Budget<span className="text-emerald-500">Bloom</span>
+              </h1>
+              <p className="text-muted-foreground">Grow your financial awareness</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <DarkModeToggle />
+              <Button 
+                onClick={() => setShowAuthDialog(true)}
+                className="bg-emerald-500 hover:bg-emerald-600"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
+            </div>
+          </div>
+
+          {/* Welcome Section */}
+          <div className="text-center py-20">
+            <div className="text-6xl mb-6">🌱</div>
+            <h2 className="text-3xl font-bold mb-4">Welcome to BudgetBloom</h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Take control of your finances and watch your financial awareness bloom. 
+              Track expenses, set savings goals, and visualize your spending patterns.
+            </p>
+            <Button 
+              onClick={() => setShowAuthDialog(true)}
+              size="lg"
+              className="bg-emerald-500 hover:bg-emerald-600"
+            >
+              Get Started
+            </Button>
+          </div>
+
+          <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
       <div className="container mx-auto px-4 py-6 max-w-6xl">
@@ -67,7 +158,7 @@ const Index = () => {
             <h1 className="text-4xl font-bold text-foreground mb-2">
               Budget<span className="text-emerald-500">Bloom</span>
             </h1>
-            <p className="text-muted-foreground">Grow your financial awareness</p>
+            <p className="text-muted-foreground">Welcome back, {user.email}</p>
           </div>
           <div className="flex items-center gap-4">
             <DarkModeToggle />
@@ -77,6 +168,13 @@ const Index = () => {
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Expense
+            </Button>
+            <Button 
+              onClick={handleSignOut}
+              variant="outline"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
             </Button>
           </div>
         </div>
@@ -142,7 +240,7 @@ const Index = () => {
               <SavingsGoal 
                 currentGoal={savingsGoal}
                 totalSpent={totalSpentThisMonth}
-                onUpdateGoal={updateSavingsGoal}
+                onUpdateGoal={handleUpdateSavingsGoal}
               />
               <AnalyticsDashboard expenses={currentMonthExpenses} />
             </div>
@@ -151,7 +249,7 @@ const Index = () => {
           <TabsContent value="expenses">
             <ExpenseHistory 
               expenses={expenses}
-              onDeleteExpense={deleteExpense}
+              onDeleteExpense={handleDeleteExpense}
             />
           </TabsContent>
 
@@ -167,7 +265,7 @@ const Index = () => {
         {/* Expense Form Modal */}
         {showExpenseForm && (
           <ExpenseForm 
-            onSubmit={addExpense}
+            onSubmit={handleAddExpense}
             onCancel={() => setShowExpenseForm(false)}
           />
         )}
