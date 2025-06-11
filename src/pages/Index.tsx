@@ -10,6 +10,7 @@ import SavingsGoal from '@/components/SavingsGoal';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import ExpenseCalendar from '@/components/ExpenseCalendar';
 import DarkModeToggle from '@/components/DarkModeToggle';
+import { AuthDialog } from '@/components/AuthDialog';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Expense, SavingsGoalData } from '@/types/finance';
 import { toast } from '@/hooks/use-toast';
@@ -71,6 +72,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-4">
             <DarkModeToggle />
+            <AuthDialog />
             <Button 
               onClick={() => setShowExpenseForm(true)}
               className="bg-emerald-500 hover:bg-emerald-600"
