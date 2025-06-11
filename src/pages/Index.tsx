@@ -14,16 +14,21 @@ import { AuthDialog } from '@/components/AuthDialog';
 import { useAuth } from '@/App';
 import { supabase } from '@/lib/supabase';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useExpenses } from '@/hooks/useExpenses';
+import { useAutoLogout } from '@/hooks/useAutoLogout';
 import { Expense, SavingsGoalData } from '@/types/finance';
 import { toast } from '@/hooks/use-toast';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const [expenses, setExpenses] = useLocalStorage<Expense[]>('budgetbloom-expenses', []);
+  const { expenses, loading: expensesLoading, addExpense, deleteExpense } = useExpenses();
   const [savingsGoal, setSavingsGoal] = useLocalStorage<SavingsGoalData | null>('budgetbloom-savings-goal', null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Auto logout functionality
+  useAutoLogout();
 
   useEffect(() => {
     if (user && !loading) {
@@ -41,25 +46,9 @@ const Index = () => {
     });
   };
 
-  const addExpense = (expense: Omit<Expense, 'id'>) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: Date.now().toString(),
-    };
-    setExpenses(prev => [newExpense, ...prev]);
+  const handleAddExpense = async (expense: Omit<Expense, 'id'>) => {
+    await addExpense(expense);
     setShowExpenseForm(false);
-    toast({
-      title: "Expense Added",
-      description: `$${expense.amount} spent on ${expense.category}`,
-    });
-  };
-
-  const deleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(expense => expense.id !== id));
-    toast({
-      title: "Expense Deleted",
-      description: "Your expense has been removed",
-    });
   };
 
   const updateSavingsGoal = (goal: SavingsGoalData) => {
@@ -79,7 +68,7 @@ const Index = () => {
 
   const totalSpentThisMonth = currentMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-  if (loading) {
+  if (loading || expensesLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -271,7 +260,7 @@ const Index = () => {
         {/* Expense Form Modal */}
         {showExpenseForm && (
           <ExpenseForm 
-            onSubmit={addExpense}
+            onSubmit={handleAddExpense}
             onCancel={() => setShowExpenseForm(false)}
           />
         )}
