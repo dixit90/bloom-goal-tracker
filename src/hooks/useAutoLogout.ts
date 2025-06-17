@@ -1,83 +1,49 @@
 
-import { useEffect, useRef } from 'react';
-import { useAuth } from '@/App';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 
 export function useAutoLogout() {
-  const { user } = useAuth();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const INACTIVITY_TIME = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-  const WARNING_TIME = 5.5 * 60 * 60 * 1000; // 5.5 hours for warning
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Session Expired",
-      description: "You've been logged out due to inactivity",
-    });
-  };
-
-  const showWarning = () => {
-    toast({
-      title: "Session Expiring Soon",
-      description: "You'll be logged out in 30 minutes due to inactivity",
-    });
-  };
-
-  const resetTimer = () => {
-    // Clear existing timers
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    if (warningTimeoutRef.current) {
-      clearTimeout(warningTimeoutRef.current);
-    }
-
-    if (user) {
-      // Set warning timer (30 minutes before logout)
-      warningTimeoutRef.current = setTimeout(showWarning, WARNING_TIME);
-      
-      // Set logout timer
-      timeoutRef.current = setTimeout(logout, INACTIVITY_TIME);
-    }
-  };
-
   useEffect(() => {
-    if (!user) return;
+    let timeoutId: NodeJS.Timeout;
+    let lastActivity = Date.now();
 
-    // Activity events to track
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const INACTIVITY_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
 
-    // Reset timer on any activity
+    const resetTimer = () => {
+      lastActivity = Date.now();
+      clearTimeout(timeoutId);
+      
+      timeoutId = setTimeout(async () => {
+        await supabase.auth.signOut();
+        toast({
+          title: "Session Expired",
+          description: "You have been logged out due to inactivity",
+        });
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Track user activity
+    const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
     const handleActivity = () => {
       resetTimer();
     };
 
     // Add event listeners
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, true);
+    activities.forEach(activity => {
+      document.addEventListener(activity, handleActivity, true);
     });
 
-    // Initial timer setup
+    // Initialize timer
     resetTimer();
 
     // Cleanup
     return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity, true);
+      clearTimeout(timeoutId);
+      activities.forEach(activity => {
+        document.removeEventListener(activity, handleActivity, true);
       });
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (warningTimeoutRef.current) {
-        clearTimeout(warningTimeoutRef.current);
-      }
     };
-  }, [user]);
-
-  return null;
+  }, []);
 }
