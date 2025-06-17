@@ -29,10 +29,10 @@ export function useExpenses() {
       // Transform database data to match our Expense type
       const transformedExpenses: Expense[] = data.map(expense => ({
         id: expense.id,
-        amount: parseFloat(expense.amount),
+        amount: parseFloat(expense.amount.toString()),
         category: expense.category as Expense['category'],
         description: expense.description || undefined,
-        date: expense.date.split('T')[0], // Convert to YYYY-MM-DD format
+        date: expense.date,
       }));
 
       setExpenses(transformedExpenses);
@@ -60,7 +60,7 @@ export function useExpenses() {
             user_id: user.id,
             amount: expense.amount,
             category: expense.category,
-            description: expense.description || '',
+            description: expense.description || null,
             date: expense.date,
           },
         ])
@@ -72,10 +72,10 @@ export function useExpenses() {
       // Transform and add to local state
       const newExpense: Expense = {
         id: data.id,
-        amount: parseFloat(data.amount),
+        amount: parseFloat(data.amount.toString()),
         category: data.category as Expense['category'],
         description: data.description || undefined,
-        date: data.date.split('T')[0],
+        date: data.date,
       };
 
       setExpenses(prev => [newExpense, ...prev]);
