@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { Expense } from '@/types/finance';
 
 interface ExpenseFormProps {
@@ -19,7 +23,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit, onCancel }) => {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<string>('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<Date>(new Date());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +36,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit, onCancel }) => {
       amount: parseFloat(amount),
       category: category as Expense['category'],
       description: description || undefined,
-      date,
+      date: format(date, 'yyyy-MM-dd'),
     });
 
     // Reset form
     setAmount('');
     setCategory('');
     setDescription('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(new Date());
   };
 
   return (
@@ -93,14 +97,30 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onSubmit, onCancel }) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(selectedDate) => selectedDate && setDate(selectedDate)}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="flex gap-2 pt-4">
